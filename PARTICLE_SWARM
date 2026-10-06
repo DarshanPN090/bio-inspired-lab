@@ -1,0 +1,92 @@
+# PSO-Based Hyperparameter Tuning
+# Example: Finding the best K value for KNN
+
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score
+import random
+
+# Load dataset
+data = load_iris()
+X = data.data
+y = data.target
+
+# Split dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Search range for K
+MIN_K = 1
+MAX_K = 20
+
+# Number of particles
+NUM_PARTICLES = 10
+
+# Number of iterations
+ITERATIONS = 10
+
+# Create particles with random K values
+particles = [
+    random.randint(MIN_K, MAX_K)
+    for _ in range(NUM_PARTICLES)
+]
+
+# Initial best values
+personal_best = particles.copy()
+personal_best_scores = []
+
+# Calculate initial accuracy
+for k in particles:
+    model = KNeighborsClassifier(n_neighbors=k)
+    model.fit(X_train, y_train)
+    prediction = model.predict(X_test)
+    accuracy = accuracy_score(y_test, prediction)
+    personal_best_scores.append(accuracy)
+
+# Find global best
+best_index = personal_best_scores.index(max(personal_best_scores))
+global_best = personal_best[best_index]
+global_best_score = personal_best_scores[best_index]
+
+# PSO iterations
+for iteration in range(ITERATIONS):
+
+    for i in range(NUM_PARTICLES):
+
+        # Move particle towards global best
+        if particles[i] < global_best:
+            particles[i] += 1
+        elif particles[i] > global_best:
+            particles[i] -= 1
+
+        # Keep K within range
+        particles[i] = max(MIN_K, min(MAX_K, particles[i]))
+
+        # Evaluate new K
+        model = KNeighborsClassifier(n_neighbors=particles[i])
+        model.fit(X_train, y_train)
+
+        prediction = model.predict(X_test)
+        accuracy = accuracy_score(y_test, prediction)
+
+        # Update personal best
+        if accuracy > personal_best_scores[i]:
+            personal_best[i] = particles[i]
+            personal_best_scores[i] = accuracy
+
+        # Update global best
+        if accuracy > global_best_score:
+            global_best = particles[i]
+            global_best_score = accuracy
+
+    print(
+        f"Iteration {iteration + 1}: "
+        f"Best K = {global_best}, "
+        f"Accuracy = {global_best_score:.2f}"
+    )
+
+print("\nFinal Result")
+print("Best Hyperparameter (K):", global_best)
+print("Best Accuracy:", round(global_best_score, 2))

@@ -1,0 +1,98 @@
+
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+
+        String[] jobs = {"A", "B", "C"};
+        int[] time = {3, 2, 4};
+
+        int ants = 10;
+        int iterations = 50;
+        double alpha = 1, beta = 2;
+        double rho = 0.5, Q = 100;
+
+        double[] pheromone = {1, 1, 1};
+        Random random = new Random();
+
+        int[] bestSchedule = new int[jobs.length];
+        int bestCost = Integer.MAX_VALUE;
+
+        for (int it = 0; it < iterations; it++) {
+
+            for (int a = 0; a < ants; a++) {
+                boolean[] visited = new boolean[jobs.length];
+                int[] schedule = new int[jobs.length];
+
+                for (int pos = 0; pos < jobs.length; pos++) {
+                    double[] prob = new double[jobs.length];
+                    double sum = 0;
+
+                    for (int j = 0; j < jobs.length; j++) {
+                        if (!visited[j]) {
+                            double heuristic = 1.0 / time[j];
+                            prob[j] = Math.pow(pheromone[j], alpha)
+                                    * Math.pow(heuristic, beta);
+                            sum += prob[j];
+                        }
+                    }
+
+                    double r = random.nextDouble() * sum;
+                    int chosen = -1;
+
+                    for (int j = 0; j < jobs.length; j++) {
+                        if (!visited[j]) {
+                            r -= prob[j];
+                            if (r <= 0) {
+                                chosen = j;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (chosen == -1) {
+                        for (int j = 0; j < jobs.length; j++) {
+                            if (!visited[j]) {
+                                chosen = j;
+                                break;
+                            }
+                        }
+                    }
+
+                    schedule[pos] = chosen;
+                    visited[chosen] = true;
+                }
+
+                int elapsed = 0, cost = 0;
+
+                for (int j : schedule) {
+                    elapsed += time[j];
+                    cost += elapsed;
+                }
+
+                if (cost < bestCost) {
+                    bestCost = cost;
+                    bestSchedule = schedule.clone();
+                }
+            }
+
+            // Pheromone evaporation
+            for (int j = 0; j < jobs.length; j++) {
+                pheromone[j] *= (1 - rho);
+            }
+
+            // Pheromone deposit for the best schedule
+            for (int j : bestSchedule) {
+                pheromone[j] += Q / bestCost;
+            }
+        }
+
+        System.out.println("Best Schedule:");
+        for (int j : bestSchedule) {
+            System.out.print(jobs[j] + " ");
+        }
+
+        System.out.println("\nMinimum Total Completion Time: "
+                + bestCost);
+    }
+}
